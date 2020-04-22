@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Check linting, update gomod, and execute go test
+#
+
+golangci-lint run
+case $? in
+    1) exit 1 ;;
+    127) echo Install golangci-ling from https://github.com/golangci/golangci-lint#install ;;
+    0) echo Lint Success ;;
+esac
+
+go mod tidy
+go mod vendor
+go mod verify
+
+go test -v -covermode=count -coverprofile=coverage.out ./...
+case $? in
+    1) exit 1 ;;
+    0) echo Unit Test Success && echo "To review coverage execute: go tool cover -html=coverage.out" && echo;;
+esac
+
+coverage="$(go tool cover -func coverage.out | grep total | awk '{print substr($3, 1, length($3)-1)}')"
+required_coverage=30
+if (( $(echo "$coverage > $required_coverage" |bc -l) )); then
+  echo Coverage is Greater Than $required_coverage
+  echo
+  exit 0
+else
+  echo Coverage is Less Than $required_coverage
+  exit 1
+fi
