@@ -5,16 +5,13 @@
 - [Synopsis](#synopsis)
 - [Motivation](#motivation)
 - [Code Example](#code-example)
-- [Endpoints](#endpoints)
+- [Endpoint Documentation](#endpoint-documentation)
 - [Getting Started](#getting-started)
   - [Configuration and/or Environment Variables](#configuration-andor-environment-variables)
   - [Prerequisites](#prerequisites)
   - [Installing](#installing)
 - [Running the tests](#running-the-tests)
   - [Break down into unit tests](#break-down-into-unit-tests)
-  - [Break down into end to end tests](#break-down-into-end-to-end-tests)
-- [Deployment](#deployment)
-- [Publish](#publish)
 - [Built With](#built-with)
 - [License](#license)
 - [Links](#links)
@@ -74,7 +71,7 @@ Check that branch name meets naming requirement.
 
 Check commit message meets style requirement.
 
-##### Prerequisites
+#### Prerequisites
 
 What things you need to install the software and how to install them
 
@@ -203,6 +200,7 @@ go tool cover -html=coverage.out
 
 - [Golang](https://golang.org/) - Go, the open source programming language
 - [Swagger](https://swagger.io/) - API tooling
+- [Docker](https://www.docker.com/) - Docker
 
 ## License
 

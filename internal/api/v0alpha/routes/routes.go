@@ -6,8 +6,6 @@ import (
 	v0AlphaDAL "github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal"
 )
 
-var db = make(map[string]string)
-
 // SetUpRouter sets up the routing logic for the defined API paths
 func SetUpRouter(r *gin.Engine) {
 

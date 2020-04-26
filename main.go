@@ -36,5 +36,5 @@ func main() {
 
 	log.Debug("Start API Service")
 
-	r.Run()
+	r.Run() //nolint
 }
