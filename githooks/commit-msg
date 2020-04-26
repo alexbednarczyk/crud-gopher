@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# Validates whether commit message is of a certain format.
+# Aborts commit if message is unsatisfactory
+#
+
+commit_standard_regex='(BREAKING CHANGE|feat|build|ci|chore|docs|feat|fix|perf|refactor|revert|style|test)(\(.+\))?\:.+|merge'
+error_message="Aborting commit. Please ensure your commit message meets the
+    standard requirement. 'CommitType(Optional Scope):Commit Message'
+    Use 'feat: Create Audit Trail Logs' for reference"
+
+if ! grep -iqE "$commit_standard_regex" "$1"; then
+    echo "$error_message" >&2
+    exit 1
+fi
+echo
