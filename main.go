@@ -35,7 +35,6 @@ func main() {
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	log.Debug("Start API Service")
-	log.Debug("test")
 
 	r.Run()
 }

@@ -1,16 +1,5 @@
 # crud-gopher
 
-## Scripts
-
-`./scripts/setup_git_hooks.sh`
-
-## Build Commands
-
-`docker build -t golangz:latest -f build/package/Dockerfile .`
-`docker run -p 8080:8080 golangz:latest`
-
-# crud-gopher
-
 **[Table of Contents]**
 
 - [Synopsis](#synopsis)
@@ -204,6 +193,11 @@ Visual coverage command:
 ```
 go tool cover -html=coverage.out
 ```
+
+## Build Commands
+
+`docker build -t cruggolang:latest -f build/package/Dockerfile .`
+`docker run -p 8080:8080 cruggolang:latest`
 
 ## Built With
 
