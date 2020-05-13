@@ -53,6 +53,19 @@ Place this file in the root directory of the repo and add custom values for each
 ```
 DEPLOYED=false
 LOG_LEVEL=trace
+POSTGRES_HOST=
+POSTGRES_PORT=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_SSLMODE=
+POSTGRES_DATABASE=
+# Optional
+# POSTGRES_LAZY_CONNECT=
+# POSTGRES_POOL_MAX_CONNECTION_LIFETIME=
+# POSTGRES_POOL_MAX_CONNECTION_IDLE_TIME=
+# POSTGRES_POOL_MAX_CONNECTIONS=
+# POSTGRES_POOL_MIN_CONNECTIONS=
+# POSTGRES_POOL_HEALTH_CHECK_PERIOD=
 ```
 
 #### Available Git Hooks
@@ -76,6 +89,7 @@ Check commit message meets style requirement.
 What things you need to install the software and how to install them
 
 - [golang](https://golang.org/doc/install)
+- [Gin](https://github.com/gin-gonic/gin)
 - [golangci-lint](https://github.com/golangci/golangci-lint#install)
 - [swaggo](https://github.com/swaggo/swag#getting-started)
 
@@ -199,6 +213,9 @@ go tool cover -html=coverage.out
 ## Built With
 
 - [Golang](https://golang.org/) - Go, the open source programming language
+- [Gin](https://github.com/gin-gonic/gin) - Gin is a HTTP web framework written in Go
+- [golang-migrate](https://github.com/golang-migrate/migrate) - Database migrations. CLI and Golang library.
+- [pgx](https://github.com/jackc/pgx) - PostgreSQL driver and toolkit for Go
 - [Swagger](https://swagger.io/) - API tooling
 - [Docker](https://www.docker.com/) - Docker
 

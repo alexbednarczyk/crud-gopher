@@ -1,18 +1,268 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "This is a sample server Petstore server.",
-        "title": "Swagger Example API",
+        "description": "This is an example Golang API service.",
+        "title": "Golang API Service",
         "termsOfService": "http://swagger.io/terms/",
         "contact": {},
         "license": {
-            "name": "Apache 2.0",
-            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+            "name": "MIT",
+            "url": "https://github.com/alexbednarczyk/crud-gopher/blob/master/LICENSE"
         },
         "version": "1.0"
     },
     "basePath": "/",
     "paths": {
+        "/v0alpha/crud/users": {
+            "get": {
+                "description": "fetch all users",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "fetches all users from the database",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "creates user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "creates a database entry for the user",
+                "parameters": [
+                    {
+                        "description": "User's data",
+                        "name": "UserRequest",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
+        "/v0alpha/crud/users/{user_id}": {
+            "get": {
+                "description": "fetch a user's data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "fetches a user from the database given the user's GUID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User GUID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "replace user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "replaces a database entry for the user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User GUID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User's data",
+                        "name": "UserRequest",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "delete a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "delete a database entry for the user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User GUID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {},
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "update a user's database entry",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "user crud"
+                ],
+                "summary": "updates a database entry for the user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User GUID",
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "User's data",
+                        "name": "UserRequest",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/common.HTTPError"
+                        }
+                    }
+                }
+            }
+        },
         "/v0alpha/examples/attribute": {
             "get": {
                 "description": "attribute",
@@ -23,7 +273,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "examples"
                 ],
                 "summary": "attribute example",
                 "parameters": [
@@ -122,7 +372,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "examples"
                 ],
                 "summary": "calc example",
                 "parameters": [
@@ -179,7 +429,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "examples"
                 ],
                 "summary": "path params example",
                 "parameters": [
@@ -236,7 +486,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "examples"
                 ],
                 "summary": "custome header example",
                 "parameters": [
@@ -297,7 +547,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "example"
+                    "examples"
                 ],
                 "summary": "custome header example",
                 "parameters": [
@@ -351,6 +601,61 @@
                             "type": "string"
                         }
                     }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "common.HTTPError": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 500
+                },
+                "message": {
+                    "type": "string",
+                    "example": "internal server error"
+                }
+            }
+        },
+        "model.UserRequest": {
+            "type": "object",
+            "properties": {
+                "display_name": {
+                    "type": "string",
+                    "example": "Jonny"
+                },
+                "first_name": {
+                    "type": "string",
+                    "example": "Jon"
+                },
+                "last_name": {
+                    "type": "string",
+                    "example": "Doe"
+                }
+            }
+        },
+        "model.UserResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "display_name": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "guid": {
+                    "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         }

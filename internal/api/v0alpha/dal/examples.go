@@ -12,7 +12,7 @@ import (
 // Attribute godoc
 // @Summary attribute example
 // @Description attribute
-// @Tags example
+// @Tags examples
 // @Accept json
 // @Produce json
 // @Param enumstring query string false "string enums" Enums(A, B, C)
@@ -42,7 +42,7 @@ func Attribute() func(c *gin.Context) {
 // CalcSumOfTwo godoc
 // @Summary calc example
 // @Description plus
-// @Tags example
+// @Tags examples
 // @Accept json
 // @Produce json
 // @Param val1 query int true "used for calc"
@@ -72,7 +72,7 @@ func CalcSumOfTwo() func(c *gin.Context) {
 // GetAccountIDInGroup godoc
 // @Summary path params example
 // @Description path params
-// @Tags example
+// @Tags examples
 // @Accept json
 // @Produce json
 // @Param group_id path int true "Group ID"
@@ -101,7 +101,7 @@ func GetAccountIDInGroup() func(c *gin.Context) {
 // UseHeader godoc
 // @Summary custome header example
 // @Description custome header
-// @Tags example
+// @Tags examples
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Authentication header"
@@ -119,7 +119,7 @@ func UseHeader() func(c *gin.Context) {
 // Securities godoc
 // @Summary custome header example
 // @Description custome header
-// @Tags example
+// @Tags examples
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Authentication header"
