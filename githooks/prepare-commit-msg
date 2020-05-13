@@ -7,7 +7,7 @@ error_message="Aborting commit. Please ensure your branch message meets the
                standard requirement. 'TicketName-TicketID-Branch-Description'
               Use 'tik-123-create-audit-trail' for reference. To rename a branch use 'git branch -m <newname>"
 
-if [[ $current_branch =~ ^[A-Za-z]{3,}\-[0-9]{3,}\-.+$ ]]; then
+if [[ $current_branch =~ ^[A-Za-z]{3,}\-[0-9]{1,}\-.+$ ]]; then
     echo Branch Syntax is Valid;
     echo
 else

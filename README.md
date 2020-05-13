@@ -5,16 +5,13 @@
 - [Synopsis](#synopsis)
 - [Motivation](#motivation)
 - [Code Example](#code-example)
-- [Endpoints](#endpoints)
+- [Endpoint Documentation](#endpoint-documentation)
 - [Getting Started](#getting-started)
   - [Configuration and/or Environment Variables](#configuration-andor-environment-variables)
   - [Prerequisites](#prerequisites)
   - [Installing](#installing)
 - [Running the tests](#running-the-tests)
   - [Break down into unit tests](#break-down-into-unit-tests)
-  - [Break down into end to end tests](#break-down-into-end-to-end-tests)
-- [Deployment](#deployment)
-- [Publish](#publish)
 - [Built With](#built-with)
 - [License](#license)
 - [Links](#links)
@@ -56,6 +53,19 @@ Place this file in the root directory of the repo and add custom values for each
 ```
 DEPLOYED=false
 LOG_LEVEL=trace
+POSTGRES_HOST=
+POSTGRES_PORT=
+POSTGRES_USER=
+POSTGRES_PASSWORD=
+POSTGRES_SSLMODE=
+POSTGRES_DATABASE=
+# Optional
+# POSTGRES_LAZY_CONNECT=
+# POSTGRES_POOL_MAX_CONNECTION_LIFETIME=
+# POSTGRES_POOL_MAX_CONNECTION_IDLE_TIME=
+# POSTGRES_POOL_MAX_CONNECTIONS=
+# POSTGRES_POOL_MIN_CONNECTIONS=
+# POSTGRES_POOL_HEALTH_CHECK_PERIOD=
 ```
 
 #### Available Git Hooks
@@ -74,7 +84,7 @@ Check that branch name meets naming requirement.
 
 Check commit message meets style requirement.
 
-##### Prerequisites
+#### Prerequisites
 
 What things you need to install the software and how to install them
 
@@ -202,7 +212,11 @@ go tool cover -html=coverage.out
 ## Built With
 
 - [Golang](https://golang.org/) - Go, the open source programming language
+- [Gin](https://github.com/gin-gonic/gin) - Gin is a HTTP web framework written in Go
+- [golang-migrate](https://github.com/golang-migrate/migrate) - Database migrations. CLI and Golang library.
+- [pgx](https://github.com/jackc/pgx) - PostgreSQL driver and toolkit for Go
 - [Swagger](https://swagger.io/) - API tooling
+- [Docker](https://www.docker.com/) - Docker
 
 ## License
 

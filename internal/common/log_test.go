@@ -38,7 +38,5 @@ func TestSetLogLevel(t *testing.T) {
 func TestStandardFormatLogs(t *testing.T) {
 
 	assert.Equal(t, false, StandardFormatLogs(false))
-
 	assert.Equal(t, true, StandardFormatLogs(true))
-
 }

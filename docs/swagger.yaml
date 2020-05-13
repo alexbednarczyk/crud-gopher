@@ -1,14 +1,216 @@
 basePath: /
+definitions:
+  common.HTTPError:
+    properties:
+      code:
+        example: 500
+        type: integer
+      message:
+        example: internal server error
+        type: string
+    type: object
+  model.UserRequest:
+    properties:
+      display_name:
+        example: Jonny
+        type: string
+      first_name:
+        example: Jon
+        type: string
+      last_name:
+        example: Doe
+        type: string
+    type: object
+  model.UserResponse:
+    properties:
+      created_at:
+        type: string
+      display_name:
+        type: string
+      first_name:
+        type: string
+      guid:
+        type: string
+      last_name:
+        type: string
+      updated_at:
+        type: string
+    type: object
 info:
   contact: {}
-  description: This is a sample server Petstore server.
+  description: This is an example Golang API service.
   license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
+    name: MIT
+    url: https://github.com/alexbednarczyk/crud-gopher/blob/master/LICENSE
   termsOfService: http://swagger.io/terms/
-  title: Swagger Example API
+  title: Golang API Service
   version: "1.0"
 paths:
+  /v0alpha/crud/users:
+    get:
+      description: fetch all users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: fetches all users from the database
+      tags:
+      - user crud
+    post:
+      consumes:
+      - application/json
+      description: creates user
+      parameters:
+      - description: User's data
+        in: body
+        name: UserRequest
+        schema:
+          $ref: '#/definitions/model.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: creates a database entry for the user
+      tags:
+      - user crud
+  /v0alpha/crud/users/{user_id}:
+    delete:
+      consumes:
+      - application/json
+      description: delete a user
+      parameters:
+      - description: User GUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204": {}
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: delete a database entry for the user
+      tags:
+      - user crud
+    get:
+      consumes:
+      - application/json
+      description: fetch a user's data
+      parameters:
+      - description: User GUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: fetches a user from the database given the user's GUID
+      tags:
+      - user crud
+    patch:
+      consumes:
+      - application/json
+      description: update a user's database entry
+      parameters:
+      - description: User GUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: User's data
+        in: body
+        name: UserRequest
+        schema:
+          $ref: '#/definitions/model.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: updates a database entry for the user
+      tags:
+      - user crud
+    put:
+      consumes:
+      - application/json
+      description: replace user
+      parameters:
+      - description: User GUID
+        in: path
+        name: user_id
+        required: true
+        type: string
+      - description: User's data
+        in: body
+        name: UserRequest
+        schema:
+          $ref: '#/definitions/model.UserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/common.HTTPError'
+      summary: replaces a database entry for the user
+      tags:
+      - user crud
   /v0alpha/examples/attribute:
     get:
       consumes:
@@ -77,7 +279,7 @@ paths:
             type: string
       summary: attribute example
       tags:
-      - example
+      - examples
   /v0alpha/examples/calc:
     get:
       consumes:
@@ -115,7 +317,7 @@ paths:
             type: string
       summary: calc example
       tags:
-      - example
+      - examples
   /v0alpha/examples/groups/{group_id}/accounts/{account_id}:
     get:
       consumes:
@@ -153,7 +355,7 @@ paths:
             type: string
       summary: path params example
       tags:
-      - example
+      - examples
   /v0alpha/examples/header:
     get:
       consumes:
@@ -186,7 +388,7 @@ paths:
             type: string
       summary: custome header example
       tags:
-      - example
+      - examples
   /v0alpha/examples/securities:
     get:
       consumes:
@@ -224,7 +426,7 @@ paths:
         - write
       summary: custome header example
       tags:
-      - example
+      - examples
   /v0alpha/ping:
     get:
       description: display pong
