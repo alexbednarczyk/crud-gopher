@@ -3,8 +3,6 @@ package dal
 import (
 	"context"
 	"errors"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 
 	"github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/model"
@@ -40,9 +38,6 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 		newRecord := model.UserResponse{}
 
 		if err := c.ShouldBindJSON(&newRecord); err != nil {
-			x, _ := ioutil.ReadAll(c.Request.Body)
-			log.Warn(x)
-			fmt.Println(x)
 			log.Warn(err.Error())
 			common.NewError(c, http.StatusInternalServerError, err)
 			return
