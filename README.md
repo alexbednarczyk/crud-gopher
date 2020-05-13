@@ -89,7 +89,6 @@ Check commit message meets style requirement.
 What things you need to install the software and how to install them
 
 - [golang](https://golang.org/doc/install)
-- [Gin](https://github.com/gin-gonic/gin)
 - [golangci-lint](https://github.com/golangci/golangci-lint#install)
 - [swaggo](https://github.com/swaggo/swag#getting-started)
 
