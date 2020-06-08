@@ -26,7 +26,6 @@ import (
 // @Router /v0alpha/crud/users [post]
 func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		// Acquire database connection
 		conn, err := db.Acquire(c)
 		if err != nil {
 			log.Warn(err.Error())
@@ -77,7 +76,6 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			// Acquire database connection
 			conn, err := db.Acquire(c)
 			if err != nil {
 				log.Warn(err.Error())
@@ -91,6 +89,11 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt); err == nil {
 				c.JSON(http.StatusOK, record)
 			} else {
+				var errNotFound = errors.New("no rows in result set")
+				if !errors.Is(err, errNotFound) {
+					common.NewError(c, http.StatusNotFound, err)
+					return
+				}
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
 			}
@@ -112,7 +115,6 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Router /v0alpha/crud/users [get]
 func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		// Acquire database connection
 		conn, err := db.Acquire(c)
 		if err != nil {
 			log.Warn(err.Error())
@@ -158,7 +160,6 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			// Acquire database connection
 			conn, err := db.Acquire(c)
 			if err != nil {
 				log.Warn(err.Error())
@@ -234,7 +235,6 @@ func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			// Acquire database connection
 			conn, err := db.Acquire(c)
 			if err != nil {
 				log.Warn(err.Error())
@@ -290,7 +290,6 @@ func DeleteUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
 
 		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			// Acquire database connection
 			conn, err := db.Acquire(c)
 			if err != nil {
 				log.Warn(err.Error())
