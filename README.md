@@ -90,6 +90,7 @@ What things you need to install the software and how to install them
 
 - [golang](https://golang.org/doc/install)
 - [golangci-lint](https://github.com/golangci/golangci-lint#install)
+- [postman](https://www.postman.com/)
 - [swaggo](https://github.com/swaggo/swag#getting-started)
 
 ### Installing
@@ -131,6 +132,31 @@ http://localhost:8080/swagger/index.html
 ## Running the tests
 
 Explain how to run the automated tests for this system
+
+### Break down into integration tests
+
+Happy path integration tests for v0alpha/crud/users.
+
+#### Executing the integration tests
+
+Start the service and ensure it runs without errors, follow the instructions above in [installing](#installing) for instructions to get the service running.
+
+1. Open Postman and **import** the Postman collection located in this repo at `tests/v0alpha-crud-users.postman_collection.json`
+2. Once imported, there will be a folder under Collections named `v0alpha/crud/users`.
+3. **Hover over** the folder and a play button will appear on the right, **click** the play button.
+4. A Run button with a blue background will appear, **click** the Run button.
+5. After clicking the Run button a new window named Collection Runner will appear. This tool enables the user to execute the integration tests with ease.
+6. **Set** the iterations to 1, can try more later.
+7. **Set** the delay to 1000 ms.
+8. **Press** the blue button near the bottom named `Run v0alpha/crud...`
+
+The Collection Runner will now execute the happy path integration tests. There should be activity in the logs of the service that show the requests being made.
+
+#### Test explanation and Results
+
+At a high level these integration tests execute the happy path to create a user, modify the user, delete the user, with confirmation steps between to ensure the actions are being taken and executed properly.
+
+These tests are a WIP, sometimes these tests will fail based on database and service times. A longer delay between in the Collection Runner results in fewer failures.
 
 ### Break down into unit tests
 
