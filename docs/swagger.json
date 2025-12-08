@@ -27,7 +27,10 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.UserResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.UserResponse"
+                            }
                         }
                     },
                     "400": {
@@ -197,7 +200,9 @@
                     }
                 ],
                 "responses": {
-                    "204": {},
+                    "204": {
+                        "description": ""
+                    },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
@@ -319,8 +324,6 @@
                         "in": "query"
                     },
                     {
-                        "maximum": 10,
-                        "minimum": 1,
                         "type": "integer",
                         "description": "int valid",
                         "name": "int",

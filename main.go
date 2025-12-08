@@ -1,6 +1,9 @@
 package main
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	migrate "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -27,9 +30,9 @@ import (
 
 // @BasePath /
 func main() {
-	e := variables.FetchAllEnvironmentVariables()
+	e := variables.MustLoad()
 	common.SetLogLevel(e.LogLevel)
-	common.StandardFormatLogs(e.Deployed)
+	common.ConfigureLogger(e.Deployed)
 
 	connPool, err := config.GetPostgresDBConnectionPool(e)
 	if err != nil {
@@ -43,12 +46,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		log.Warn(err)
 	}
 
 	r := gin.Default()
-	r.NoRoute(func(c *gin.Context) {})
+	r.NoRoute(func(c *gin.Context) {
+		common.NewError(c, http.StatusNotFound, errors.New("route not found"))
+	})
 	v0AlphaRoutes.SetUpRouter(r, connPool)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

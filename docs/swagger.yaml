@@ -55,7 +55,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.UserResponse'
+            items:
+              $ref: '#/definitions/model.UserResponse'
+            type: array
         "400":
           description: Bad Request
           schema:
@@ -105,7 +107,8 @@ paths:
       produces:
       - application/json
       responses:
-        "204": {}
+        "204":
+          description: ""
         "400":
           description: Bad Request
           schema:
@@ -249,8 +252,6 @@ paths:
         type: string
       - description: int valid
         in: query
-        maximum: 10
-        minimum: 1
         name: int
         type: integer
       - default: A

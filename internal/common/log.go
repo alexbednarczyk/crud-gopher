@@ -2,48 +2,39 @@ package common
 
 import (
 	"os"
+	"strings"
 
 	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	log "github.com/sirupsen/logrus"
 )
 
-// SetLogLevel function sets the log level
+// SetLogLevel configures the global log level, accepting case-insensitive
+// values. Unknown levels fall back to info to avoid noisy debug output in
+// production environments.
 func SetLogLevel(logLevel string) {
-	switch logLevel {
-	case "trace":
-		log.SetLevel(log.TraceLevel)
-	case "info":
-		log.SetLevel(log.InfoLevel)
-	case "warn":
-		log.SetLevel(log.WarnLevel)
-	case "error":
-		log.SetLevel(log.ErrorLevel)
-	case "panic":
-		log.SetLevel(log.PanicLevel)
-	case "fatal":
-		log.SetLevel(log.FatalLevel)
-	default:
-		log.SetLevel(log.DebugLevel)
+	level, err := log.ParseLevel(strings.ToLower(logLevel))
+	if err != nil {
+		level = log.InfoLevel
 	}
+	log.SetLevel(level)
 }
 
-// StandardFormatLogs sets the log formatting
-func StandardFormatLogs(deployed bool) bool {
-
+// ConfigureLogger applies a consistent formatter and output destination.
+// JSON is used when deployed for easier ingestion; text is used locally for
+// readability. The runtime formatter preserves caller information.
+func ConfigureLogger(deployed bool) {
+	var child log.Formatter
 	if deployed {
-		formatter := runtime.Formatter{ChildFormatter: &log.JSONFormatter{}}
-		formatter.Line = true
-		formatter.Package = true
-		formatter.File = true
-		log.SetFormatter(&formatter)
-		log.SetOutput(os.Stdout)
+		child = &log.JSONFormatter{}
 	} else {
-		formatter := runtime.Formatter{ChildFormatter: &log.TextFormatter{}}
-		formatter.Line = true
-		formatter.Package = true
-		formatter.File = true
-		log.SetFormatter(&formatter)
-		log.SetOutput(os.Stdout)
+		child = &log.TextFormatter{FullTimestamp: true}
 	}
-	return deployed
+
+	formatter := runtime.Formatter{ChildFormatter: child}
+	formatter.Line = true
+	formatter.Package = true
+	formatter.File = true
+
+	log.SetFormatter(&formatter)
+	log.SetOutput(os.Stdout)
 }

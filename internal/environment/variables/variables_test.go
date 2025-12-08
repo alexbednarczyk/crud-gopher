@@ -1,29 +1,36 @@
 package variables
 
 import (
-	"os"
 	"testing"
 
-	"github.com/joho/godotenv"
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestEnvironmentVariables(t *testing.T) {
+func TestLoadDefaults(t *testing.T) {
+	env, err := Load()
+	require.NoError(t, err)
 
-	err := godotenv.Load("../../../.env")
-	if err != nil {
-		log.Println("Error loading .env file")
-	}
+	assert.False(t, env.Deployed)
+	assert.Equal(t, "info", env.LogLevel)
+	assert.Equal(t, "localhost", env.PostgresHost)
+	assert.Equal(t, int32(5432), env.PostgresPort)
+	assert.Equal(t, "disable", env.PostgresSSLMode)
+}
 
-	e := FetchAllEnvironmentVariables()
+func TestLoadOverrides(t *testing.T) {
+	t.Setenv("DEPLOYED", "true")
+	t.Setenv("POSTGRES_HOST", "db.local")
+	t.Setenv("POSTGRES_PORT", "15432")
+	t.Setenv("POSTGRES_DATABASE", "sample")
+	t.Setenv("LOG_LEVEL", "debug")
 
-	assert.NotNil(t, e.Deployed)
-	assert.NotEmpty(t, e.LogLevel)
+	env, err := Load()
+	require.NoError(t, err)
 
-	os.Setenv("DEPLOYED", "true")
-	e = FetchAllEnvironmentVariables()
-
-	assert.NotNil(t, e.Deployed)
-	assert.Equal(t, true, e.Deployed)
+	assert.True(t, env.Deployed)
+	assert.Equal(t, "db.local", env.PostgresHost)
+	assert.Equal(t, int32(15432), env.PostgresPort)
+	assert.Equal(t, "sample", env.PostgresDatabase)
+	assert.Equal(t, "debug", env.LogLevel)
 }
