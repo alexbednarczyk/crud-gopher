@@ -4,7 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	migrate "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/golang-migrate/migrate/v4/source/iofs"
 	_ "github.com/joho/godotenv/autoload"
 	log "github.com/sirupsen/logrus"
 	swaggerFiles "github.com/swaggo/files"
@@ -14,6 +14,7 @@ import (
 	v0AlphaRoutes "github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/routes"
 	common "github.com/alexbednarczyk/crud-gopher/internal/common"
 	"github.com/alexbednarczyk/crud-gopher/internal/database/config"
+	"github.com/alexbednarczyk/crud-gopher/internal/database/migrations"
 	"github.com/alexbednarczyk/crud-gopher/internal/environment/variables"
 )
 
@@ -37,13 +38,19 @@ func main() {
 	}
 	defer connPool.Close()
 
-	m, err := migrate.New(
-		"file://internal/database/migrations",
+	d, err := iofs.New(migrations.FS, ".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	m, err := migrate.NewWithSourceInstance(
+		"iofs",
+		d,
 		config.BuildMigrationURLConnectionString(e))
 	if err != nil {
 		log.Fatal(err)
 	}
-	if err := m.Up(); err != nil {
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		log.Warn(err)
 	}
 
@@ -54,5 +61,7 @@ func main() {
 
 	log.Debug("Start API Service")
 
-	r.Run() //nolint
+	if err := r.Run(); err != nil {
+		log.Fatal(err)
+	}
 }

@@ -1,13 +1,13 @@
-package dal
+package handlers
 
 import (
 	"context"
 	"errors"
 	"net/http"
 
-	"github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/model"
+	"github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/models"
 	"github.com/alexbednarczyk/crud-gopher/internal/common"
-	"github.com/prometheus/common/log"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -20,8 +20,8 @@ import (
 // @Tags user crud
 // @Accept json
 // @Produce json
-// @Param UserRequest body model.UserRequest false "User's data"
-// @Success 201 {object} model.UserResponse
+// @Param UserRequest body models.UserRequest false "User's data"
+// @Success 201 {object} models.UserResponse
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users [post]
 func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
@@ -34,7 +34,7 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 		}
 		defer conn.Release()
 
-		newRecord := model.UserResponse{}
+		newRecord := models.UserResponse{}
 
 		if err := c.ShouldBindJSON(&newRecord); err != nil {
 			log.Warn(err.Error())
@@ -68,7 +68,7 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param user_id path string true "User GUID"
-// @Success 200 {object} model.UserResponse
+// @Success 200 {object} models.UserResponse
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [get]
@@ -84,7 +84,7 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 			}
 			defer conn.Release()
 
-			record := model.UserResponse{}
+			record := models.UserResponse{}
 
 			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt); err == nil {
 				c.JSON(http.StatusOK, record)
@@ -109,7 +109,7 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Description fetch all users
 // @Tags user crud
 // @Produce json
-// @Success 200 {object} model.UserResponse[]
+// @Success 200 {object} models.UserResponse[]
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users [get]
@@ -123,11 +123,11 @@ func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 		}
 		defer conn.Release()
 
-		records := []model.UserResponse{}
+		records := []models.UserResponse{}
 
 		if rows, err := conn.Query(context.Background(), "select * from users"); err == nil {
 			for rows.Next() {
-				record := model.UserResponse{}
+				record := models.UserResponse{}
 				err := rows.Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt)
 				if err != nil {
 					log.Warn(err.Error())
@@ -151,8 +151,8 @@ func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param user_id path string true "User GUID"
-// @Param UserRequest body model.UserRequest false "User's data"
-// @Success 200 {object} model.UserResponse
+// @Param UserRequest body models.UserRequest false "User's data"
+// @Success 200 {object} models.UserResponse
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [patch]
@@ -168,7 +168,7 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 			}
 			defer conn.Release()
 
-			existingRecord := model.UserResponse{}
+			existingRecord := models.UserResponse{}
 
 			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&existingRecord.GUID, &existingRecord.DisplayName, &existingRecord.FirstName, &existingRecord.LastName, &existingRecord.CreatedAt, &existingRecord.UpdatedAt); err != nil {
 				log.Warn(err.Error())
@@ -176,7 +176,7 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 				return
 			}
 
-			record := model.UserResponse{}
+			record := models.UserResponse{}
 
 			if err := c.ShouldBindJSON(&record); err != nil {
 				log.Warn(err.Error())
@@ -226,8 +226,8 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param user_id path string true "User GUID"
-// @Param UserRequest body model.UserRequest false "User's data"
-// @Success 200 {object} model.UserResponse
+// @Param UserRequest body models.UserRequest false "User's data"
+// @Success 200 {object} models.UserResponse
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [put]
@@ -243,7 +243,7 @@ func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 			}
 			defer conn.Release()
 
-			record := model.UserResponse{}
+			record := models.UserResponse{}
 
 			if err := c.ShouldBindJSON(&record); err != nil {
 				log.Warn(err.Error())
