@@ -3,61 +3,89 @@ package config
 import (
 	"context"
 	"fmt"
-	"strings"
+	"net/url"
+	"time"
 
 	"github.com/alexbednarczyk/crud-gopher/internal/environment/variables"
 
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func buildURLConnectionString(e variables.AllEnvironmentVariables) string {
-
-	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", e.PostgresUser, e.PostgresPassword, e.PostgresHost, e.PostgresPort, e.PostgresDatabase, e.PostgresSSLMode))
-
-	if len(e.PostgresPoolMaxConnectionLifetime) > 0 {
-		builder.WriteString(fmt.Sprintf("&pool_max_conn_lifetime=%s", e.PostgresPoolMaxConnectionLifetime))
+// BuildMigrationURLConnectionString creates a connection URL used for database migrations.
+func BuildMigrationURLConnectionString(e variables.AllEnvironmentVariables) string {
+	connURL := url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(e.PostgresUser, e.PostgresPassword),
+		Host:   fmt.Sprintf("%s:%d", e.PostgresHost, e.PostgresPort),
+		Path:   "/" + e.PostgresDatabase,
 	}
 
-	if len(e.PostgresPoolMaxConnectionIdleTime) > 0 {
-		builder.WriteString(fmt.Sprintf("&pool_max_conn_idle_time=%s", e.PostgresPoolMaxConnectionIdleTime))
+	query := url.Values{}
+	if e.PostgresSSLMode != "" {
+		query.Set("sslmode", e.PostgresSSLMode)
+	}
+	connURL.RawQuery = query.Encode()
+
+	return connURL.String()
+}
+
+func buildPoolConfig(e variables.AllEnvironmentVariables) (*pgxpool.Config, error) {
+	connString := BuildMigrationURLConnectionString(e)
+
+	config, err := pgxpool.ParseConfig(connString)
+	if err != nil {
+		return nil, fmt.Errorf("parse postgres connection string: %w", err)
 	}
 
 	if e.PostgresPoolMaxConnections > 0 {
-		builder.WriteString(fmt.Sprintf("&pool_max_conns=%d", e.PostgresPoolMaxConnections))
+		config.MaxConns = e.PostgresPoolMaxConnections
+	}
+	if e.PostgresPoolMinConnections > 0 {
+		config.MinConns = e.PostgresPoolMinConnections
 	}
 
-	if e.PostgresPoolMinConnections >= 0 {
-		builder.WriteString(fmt.Sprintf("&pool_min_conns=%d", e.PostgresPoolMinConnections))
+	if e.PostgresPoolMaxConnectionLifetime != "" {
+		if duration, err := time.ParseDuration(e.PostgresPoolMaxConnectionLifetime); err == nil {
+			config.MaxConnLifetime = duration
+		} else {
+			return nil, fmt.Errorf("parse PostgresPoolMaxConnectionLifetime: %w", err)
+		}
+	}
+
+	if e.PostgresPoolMaxConnectionIdleTime != "" {
+		if duration, err := time.ParseDuration(e.PostgresPoolMaxConnectionIdleTime); err == nil {
+			config.MaxConnIdleTime = duration
+		} else {
+			return nil, fmt.Errorf("parse PostgresPoolMaxConnectionIdleTime: %w", err)
+		}
 	}
 
 	if e.PostgresPoolHealthCheckPeriod > 0 {
-		builder.WriteString(fmt.Sprintf("&pool_health_check_period=%d", e.PostgresPoolHealthCheckPeriod))
+		config.HealthCheckPeriod = time.Duration(e.PostgresPoolHealthCheckPeriod) * time.Second
 	}
 
-	return builder.String()
+	return config, nil
 }
 
-// GetPostgresDBConnectionPool creates a Postgres database connection pool based on the environment arguments passed in
+// GetPostgresDBConnectionPool creates a Postgres database connection pool based on the environment arguments passed in.
 func GetPostgresDBConnectionPool(e variables.AllEnvironmentVariables) (*pgxpool.Pool, error) {
-
-	connString := buildURLConnectionString(e)
-	poolConfig, err := pgxpool.ParseConfig(connString)
+	poolConfig, err := buildPoolConfig(e)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse connString (%v)", err)
+		return nil, err
 	}
 
-	pool, err := pgxpool.ConnectConfig(context.Background(), poolConfig)
+	ctx := context.Background()
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to connect to database: %v\n", err)
+		return nil, fmt.Errorf("connect to database: %w", err)
+	}
+
+	if !e.PostgresLazyConnect {
+		if err := pool.Ping(ctx); err != nil {
+			pool.Close()
+			return nil, fmt.Errorf("ping database: %w", err)
+		}
 	}
 
 	return pool, nil
-}
-
-// BuildMigrationURLConnectionString creates a connection URL used for database migrations
-func BuildMigrationURLConnectionString(e variables.AllEnvironmentVariables) string {
-
-	return fmt.Sprintf("postgres://%s:%s@%s:%d/%s?sslmode=%s", e.PostgresUser, e.PostgresPassword, e.PostgresHost, e.PostgresPort, e.PostgresDatabase, e.PostgresSSLMode)
-
 }

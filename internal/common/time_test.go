@@ -10,9 +10,10 @@ import (
 func TestCurrentTime(t *testing.T) {
 
 	now := time.Now().UTC()
-	currentTime, _ := CurrentTime()
+	currentTime := CurrentTime()
 
 	assert.Equal(t, currentTime.Year(), now.Year())
 	assert.Equal(t, currentTime.Month(), now.Month())
 	assert.Equal(t, currentTime.Day(), now.Day())
+	assert.True(t, currentTime.Before(now.Add(time.Second)))
 }

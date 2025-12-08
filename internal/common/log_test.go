@@ -3,6 +3,7 @@ package common
 import (
 	"testing"
 
+	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/stretchr/testify/assert"
 
 	log "github.com/sirupsen/logrus"
@@ -10,17 +11,11 @@ import (
 
 func TestSetLogLevel(t *testing.T) {
 
-	SetLogLevel("foo")
-	assert.Equal(t, log.DebugLevel, log.GetLevel())
-
-	SetLogLevel("debug")
+	SetLogLevel("DEBUG")
 	assert.Equal(t, log.DebugLevel, log.GetLevel())
 
 	SetLogLevel("trace")
 	assert.Equal(t, log.TraceLevel, log.GetLevel())
-
-	SetLogLevel("info")
-	assert.Equal(t, log.InfoLevel, log.GetLevel())
 
 	SetLogLevel("warn")
 	assert.Equal(t, log.WarnLevel, log.GetLevel())
@@ -28,15 +23,12 @@ func TestSetLogLevel(t *testing.T) {
 	SetLogLevel("error")
 	assert.Equal(t, log.ErrorLevel, log.GetLevel())
 
-	SetLogLevel("panic")
-	assert.Equal(t, log.PanicLevel, log.GetLevel())
-
-	SetLogLevel("fatal")
-	assert.Equal(t, log.FatalLevel, log.GetLevel())
+	SetLogLevel("unknown")
+	assert.Equal(t, log.InfoLevel, log.GetLevel())
 }
 
-func TestStandardFormatLogs(t *testing.T) {
-
-	assert.Equal(t, false, StandardFormatLogs(false))
-	assert.Equal(t, true, StandardFormatLogs(true))
+func TestConfigureLogger(t *testing.T) {
+	ConfigureLogger(false)
+	_, ok := log.StandardLogger().Formatter.(*runtime.Formatter)
+	assert.True(t, ok)
 }

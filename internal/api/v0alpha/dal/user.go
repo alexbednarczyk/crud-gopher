@@ -1,18 +1,34 @@
 package dal
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/model"
 	"github.com/alexbednarczyk/crud-gopher/internal/common"
-	"github.com/prometheus/common/log"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4/pgxpool"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	log "github.com/sirupsen/logrus"
 )
+
+func acquireConnection(c *gin.Context, db *pgxpool.Pool) (*pgxpool.Conn, bool) {
+	if db == nil {
+		common.NewError(c, http.StatusInternalServerError, errors.New("database is not configured"))
+		return nil, false
+	}
+
+	conn, err := db.Acquire(c.Request.Context())
+	if err != nil {
+		log.Warn(err.Error())
+		common.NewError(c, http.StatusInternalServerError, err)
+		return nil, false
+	}
+
+	return conn, true
+}
 
 // CreateUser godoc
 // @Summary creates a database entry for the user
@@ -26,33 +42,28 @@ import (
 // @Router /v0alpha/crud/users [post]
 func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		conn, err := db.Acquire(c)
-		if err != nil {
-			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
+		conn, ok := acquireConnection(c, db)
+		if !ok {
 			return
 		}
 		defer conn.Release()
 
 		newRecord := model.UserResponse{}
-
 		if err := c.ShouldBindJSON(&newRecord); err != nil {
 			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
+			common.NewError(c, http.StatusBadRequest, err)
 			return
 		}
 
-		currentTime, err := common.CurrentTime()
-		if err != nil {
-			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
-			return
-		}
+		currentTime := common.CurrentTime()
 		newRecord.CreatedAt = currentTime
 		newRecord.UpdatedAt = currentTime
-		newRecord.GUID = uuid.NewV4().String()
+		newRecord.GUID = uuid.NewString()
 
-		if _, err := conn.Exec(context.Background(), "insert into users(guid, display_name, first_name, last_name, created_at, updated_at) values($1, $2, $3, $4, $5, $6)", newRecord.GUID, newRecord.DisplayName, newRecord.FirstName, newRecord.LastName, newRecord.CreatedAt, newRecord.UpdatedAt); err == nil {
+		if _, err := conn.Exec(c.Request.Context(),
+			"insert into users(guid, display_name, first_name, last_name, created_at, updated_at) values($1, $2, $3, $4, $5, $6)",
+			newRecord.GUID, newRecord.DisplayName, newRecord.FirstName, newRecord.LastName, newRecord.CreatedAt, newRecord.UpdatedAt,
+		); err == nil {
 			c.JSON(http.StatusCreated, newRecord)
 		} else {
 			log.Warn(err.Error())
@@ -74,33 +85,35 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Router /v0alpha/crud/users/{user_id} [get]
 func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
-
-			record := model.UserResponse{}
-
-			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt); err == nil {
-				c.JSON(http.StatusOK, record)
-			} else {
-				var errNotFound = errors.New("no rows in result set")
-				if !errors.Is(err, errNotFound) {
-					common.NewError(c, http.StatusNotFound, err)
-					return
-				}
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-			}
-		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+		userID, uuidFound := c.Params.Get("userId")
+		if !uuidFound {
+			log.Warn("user GUID not found")
+			common.NewError(c, http.StatusBadRequest, errors.New("user GUID not found"))
+			return
 		}
+
+		conn, ok := acquireConnection(c, db)
+		if !ok {
+			return
+		}
+		defer conn.Release()
+
+		record := model.UserResponse{}
+		err := conn.QueryRow(c.Request.Context(),
+			"select * from users where guid=$1", userID).
+			Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt)
+		if err == nil {
+			c.JSON(http.StatusOK, record)
+			return
+		}
+
+		if errors.Is(err, pgx.ErrNoRows) {
+			common.NewError(c, http.StatusNotFound, err)
+			return
+		}
+
+		log.Warnf("query user: %v", err)
+		common.NewError(c, http.StatusInternalServerError, err)
 	}
 }
 
@@ -109,38 +122,44 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Description fetch all users
 // @Tags user crud
 // @Produce json
-// @Success 200 {object} model.UserResponse[]
+// @Success 200 {array} model.UserResponse
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users [get]
 func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		conn, err := db.Acquire(c)
+		conn, ok := acquireConnection(c, db)
+		if !ok {
+			return
+		}
+		defer conn.Release()
+
+		rows, err := conn.Query(c.Request.Context(), "select * from users")
 		if err != nil {
 			log.Warn(err.Error())
 			common.NewError(c, http.StatusInternalServerError, err)
 			return
 		}
-		defer conn.Release()
+		defer rows.Close()
 
 		records := []model.UserResponse{}
-
-		if rows, err := conn.Query(context.Background(), "select * from users"); err == nil {
-			for rows.Next() {
-				record := model.UserResponse{}
-				err := rows.Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt)
-				if err != nil {
-					log.Warn(err.Error())
-					common.NewError(c, http.StatusInternalServerError, err)
-					return
-				}
-				records = append(records, record)
+		for rows.Next() {
+			record := model.UserResponse{}
+			if err := rows.Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt); err != nil {
+				log.Warn(err.Error())
+				common.NewError(c, http.StatusInternalServerError, err)
+				return
 			}
-			c.JSON(http.StatusOK, records)
-		} else {
-			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
+			records = append(records, record)
 		}
+
+		if rows.Err() != nil {
+			log.Warn(rows.Err().Error())
+			common.NewError(c, http.StatusInternalServerError, rows.Err())
+			return
+		}
+
+		c.JSON(http.StatusOK, records)
 	}
 }
 
@@ -158,63 +177,57 @@ func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 // @Router /v0alpha/crud/users/{user_id} [patch]
 func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		userID, uuidFound := c.Params.Get("userId")
+		if !uuidFound {
+			log.Warn("user GUID not found")
+			common.NewError(c, http.StatusBadRequest, errors.New("user GUID not found"))
+			return
+		}
 
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
+		conn, ok := acquireConnection(c, db)
+		if !ok {
+			return
+		}
+		defer conn.Release()
 
-			existingRecord := model.UserResponse{}
+		existingRecord := model.UserResponse{}
+		if err := conn.QueryRow(c.Request.Context(),
+			"select * from users where guid=$1", userID).
+			Scan(&existingRecord.GUID, &existingRecord.DisplayName, &existingRecord.FirstName, &existingRecord.LastName, &existingRecord.CreatedAt, &existingRecord.UpdatedAt); err != nil {
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusInternalServerError, err)
+			return
+		}
 
-			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&existingRecord.GUID, &existingRecord.DisplayName, &existingRecord.FirstName, &existingRecord.LastName, &existingRecord.CreatedAt, &existingRecord.UpdatedAt); err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
+		record := model.UserResponse{}
+		if err := c.ShouldBindJSON(&record); err != nil {
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusBadRequest, err)
+			return
+		}
 
-			record := model.UserResponse{}
+		if len(record.DisplayName) == 0 {
+			record.DisplayName = existingRecord.DisplayName
+		}
+		if len(record.FirstName) == 0 {
+			record.FirstName = existingRecord.FirstName
+		}
+		if len(record.LastName) == 0 {
+			record.LastName = existingRecord.LastName
+		}
 
-			if err := c.ShouldBindJSON(&record); err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
+		record.CreatedAt = existingRecord.CreatedAt
+		record.UpdatedAt = common.CurrentTime()
+		record.GUID = userID
 
-			if len(record.DisplayName) == 0 {
-				record.DisplayName = existingRecord.DisplayName
-			}
-			if len(record.FirstName) == 0 {
-				record.FirstName = existingRecord.FirstName
-			}
-			if len(record.LastName) == 0 {
-				record.LastName = existingRecord.LastName
-			}
-
-			currentTime, err := common.CurrentTime()
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-
-			record.CreatedAt = existingRecord.CreatedAt
-			record.UpdatedAt = currentTime
-			record.GUID = uuid
-
-			if _, err := db.Exec(context.Background(), "update users set display_name=$2, first_name=$3, last_name=$4, updated_at=$5 where guid=$1", record.GUID, record.DisplayName, record.FirstName, record.LastName, record.UpdatedAt); err == nil {
-				c.JSON(http.StatusOK, record)
-			} else {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
+		if _, err := conn.Exec(c.Request.Context(),
+			"update users set display_name=$2, first_name=$3, last_name=$4, updated_at=$5 where guid=$1",
+			record.GUID, record.DisplayName, record.FirstName, record.LastName, record.UpdatedAt); err == nil {
+			c.JSON(http.StatusOK, record)
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusInternalServerError, err)
+			return
 		}
 	}
 }
@@ -233,44 +246,38 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Router /v0alpha/crud/users/{user_id} [put]
 func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		userID, uuidFound := c.Params.Get("userId")
+		if !uuidFound {
+			log.Warn("user GUID not found")
+			common.NewError(c, http.StatusBadRequest, errors.New("user GUID not found"))
+			return
+		}
 
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
+		conn, ok := acquireConnection(c, db)
+		if !ok {
+			return
+		}
+		defer conn.Release()
 
-			record := model.UserResponse{}
+		record := model.UserResponse{}
+		if err := c.ShouldBindJSON(&record); err != nil {
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusBadRequest, err)
+			return
+		}
 
-			if err := c.ShouldBindJSON(&record); err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
+		currentTime := common.CurrentTime()
+		record.CreatedAt = currentTime
+		record.UpdatedAt = currentTime
+		record.GUID = userID
 
-			currentTime, err := common.CurrentTime()
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-
-			record.CreatedAt = currentTime
-			record.UpdatedAt = currentTime
-			record.GUID = uuid
-
-			if _, err := db.Exec(context.Background(), "update users set display_name=$2, first_name=$3, last_name=$4, created_at=$5, updated_at=$6 where guid=$1", uuid, record.DisplayName, record.FirstName, record.LastName, record.CreatedAt, record.UpdatedAt); err == nil {
-				c.JSON(http.StatusOK, record)
-			} else {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-			}
+		if _, err := conn.Exec(c.Request.Context(),
+			"update users set display_name=$2, first_name=$3, last_name=$4, created_at=$5, updated_at=$6 where guid=$1",
+			userID, record.DisplayName, record.FirstName, record.LastName, record.CreatedAt, record.UpdatedAt); err == nil {
+			c.JSON(http.StatusOK, record)
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusInternalServerError, err)
 		}
 	}
 }
@@ -288,27 +295,25 @@ func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Router /v0alpha/crud/users/{user_id} [delete]
 func DeleteUser(db *pgxpool.Pool) func(c *gin.Context) {
 	return func(c *gin.Context) {
+		userID, uuidFound := c.Params.Get("userId")
+		if !uuidFound {
+			log.Warn("user GUID not found")
+			common.NewError(c, http.StatusBadRequest, errors.New("user GUID not found"))
+			return
+		}
 
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
+		conn, ok := acquireConnection(c, db)
+		if !ok {
+			return
+		}
+		defer conn.Release()
 
-			if _, err := db.Exec(context.Background(), "delete from users where guid=$1", uuid); err == nil {
-				c.JSON(http.StatusNoContent, gin.H{})
-			} else {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-
+		if _, err := conn.Exec(c.Request.Context(), "delete from users where guid=$1", userID); err == nil {
+			c.Status(http.StatusNoContent)
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			log.Warn(err.Error())
+			common.NewError(c, http.StatusInternalServerError, err)
+			return
 		}
 	}
 }

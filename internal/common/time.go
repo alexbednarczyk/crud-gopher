@@ -1,16 +1,9 @@
 package common
 
-import (
-	"fmt"
-	"time"
-)
+import "time"
 
-// CurrentTime based on time.Now and RFC3339
-func CurrentTime() (time.Time, error) {
-	timeNow := time.Now().UTC().Format(time.RFC3339)
-	formattedTime, err := time.Parse(time.RFC3339, timeNow)
-	if err != nil {
-		return time.Now(), fmt.Errorf("Failed to parse time. %v", err)
-	}
-	return formattedTime, nil
+// CurrentTime returns the current UTC time with sub-second precision removed so
+// values are deterministic in tests and logs.
+func CurrentTime() time.Time {
+	return time.Now().UTC().Truncate(time.Millisecond)
 }

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/alexbednarczyk/crud-gopher/internal/common"
 	"github.com/gin-gonic/gin"
-	"github.com/swaggo/swag/example/celler/httputil"
 )
 
 // Attribute godoc
@@ -56,12 +56,12 @@ func CalcSumOfTwo() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		val1, err := strconv.Atoi(c.Query("val1"))
 		if err != nil {
-			httputil.NewError(c, http.StatusBadRequest, err)
+			common.NewError(c, http.StatusBadRequest, err)
 			return
 		}
 		val2, err := strconv.Atoi(c.Query("val2"))
 		if err != nil {
-			httputil.NewError(c, http.StatusBadRequest, err)
+			common.NewError(c, http.StatusBadRequest, err)
 			return
 		}
 		ans := val1 + val2
@@ -86,12 +86,12 @@ func GetAccountIDInGroup() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		groupID, err := strconv.Atoi(c.Param("group_id"))
 		if err != nil {
-			httputil.NewError(c, http.StatusBadRequest, err)
+			common.NewError(c, http.StatusBadRequest, err)
 			return
 		}
 		accountID, err := strconv.Atoi(c.Param("account_id"))
 		if err != nil {
-			httputil.NewError(c, http.StatusBadRequest, err)
+			common.NewError(c, http.StatusBadRequest, err)
 			return
 		}
 		c.String(http.StatusOK, "group_id=%d account_id=%d", groupID, accountID)
@@ -132,6 +132,6 @@ func UseHeader() func(c *gin.Context) {
 // @Router /v0alpha/examples/securities [get]
 func Securities() func(c *gin.Context) {
 	return func(c *gin.Context) {
-
+		c.String(http.StatusOK, "authorized")
 	}
 }

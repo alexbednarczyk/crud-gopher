@@ -48,7 +48,7 @@ The location of the configuration and/or environment variables for to get this p
 
 #### .env File
 
-Place this file in the root directory of the repo and add custom values for each env variable.
+Place this file in the root directory of the repo and add custom values for each env variable. Sensible local defaults are provided so the service and tests run without a `.env` file; override as needed.
 
 ```
 DEPLOYED=false
@@ -213,16 +213,7 @@ Coverage information command:
 go tool cover -func coverage.out
 ```
 
-Results in:
-
-```
-github.com/alexbednarczyk/crud-gopher/internal/common/log.go:11:                        SetLogLevel                     100.0%
-github.com/alexbednarczyk/crud-gopher/internal/common/log.go:31:                        StandardFormatLogs              100.0%
-github.com/alexbednarczyk/crud-gopher/internal/environment/variables/variables.go:17:   FetchAllEnvironmentVariables    66.7%
-github.com/alexbednarczyk/crud-gopher/main.go:25:                                       main                            0.0%
-total:                                                                                  (statements)                    68.4%
-
-```
+Review the function-by-function breakdown in the command output to spot gaps.
 
 Visual coverage command:
 
