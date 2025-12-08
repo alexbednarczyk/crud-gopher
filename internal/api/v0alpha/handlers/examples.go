@@ -1,4 +1,4 @@
-package dal
+package handlers
 
 import (
 	"fmt"

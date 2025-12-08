@@ -30,6 +30,7 @@ In the end this repo will provide guidance for the following:
 
 - API Documentation
 - Basic and Advanced API examples
+- Architectural patterns for maintainable and scalable APIs (e.g., Repository Pattern)
 - Continuous integration and continuous deployment
 - Developer workflow
 - Integration, Performance, and Unit tests
@@ -67,6 +68,10 @@ POSTGRES_DATABASE=
 # POSTGRES_POOL_MIN_CONNECTIONS=
 # POSTGRES_POOL_HEALTH_CHECK_PERIOD=
 ```
+
+#### .golangci.yml
+
+This file configures `golangci-lint`, a popular Go linter, to ensure code quality and consistency across the project.
 
 #### Available Git Hooks
 
@@ -160,68 +165,37 @@ These tests are a WIP, sometimes these tests will fail based on database and ser
 
 ### Break down into unit tests
 
-Basic unit test for the v0alpha/ping endpoint
+The project now utilizes the Repository pattern, abstracting database interactions behind an interface. This allows for effective unit testing of HTTP handlers by injecting mock implementations of the `UserRepository`.
 
-Test command:
+**Handler Unit Tests:**
+Unit tests for API handlers (e.g., for user CRUD operations) are located alongside the handlers themselves. These tests leverage `github.com/stretchr/testify/mock` to simulate repository behavior, ensuring handlers function correctly in isolation.
 
-```
-go test -v -covermode=count -coverprofile=coverage.out ./...
-```
-
-Results in:
+Test command for all unit tests:
 
 ```
-=== RUN   TestPingRoute
-[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+go test -v ./...
+```
 
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
- - using env:   export GIN_MODE=release
- - using code:  gin.SetMode(gin.ReleaseMode)
+Example Results (may vary):
 
-[GIN-debug] GET    /v0alpha/ping             --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.GetPong.func1 (3 handlers)
-[GIN-debug] GET    /v0alpha/examples/attribute --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.Attribute.func1 (3 handlers)
-[GIN-debug] GET    /v0alpha/examples/calc    --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.CalcSumOfTwo.func1 (3 handlers)
-[GIN-debug] GET    /v0alpha/examples/groups/:group_id/accounts/:account_id --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.GetAccountIDInGroup.func1 (3 handlers)
-[GIN-debug] GET    /v0alpha/examples/header  --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.UseHeader.func1 (3 handlers)
-[GIN-debug] GET    /v0alpha/examples/securities --> github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal.Securities.func1 (3 handlers)
-[GIN] 2020/04/26 - 11:17:07 | 200 |      22.323µs |                 | GET      "/v0alpha/ping"
---- PASS: TestPingRoute (0.00s)
+```
+=== RUN   TestGetPong
+--- PASS: TestGetPong (0.00s)
+=== RUN   TestGetAllUsers
+--- PASS: TestGetAllUsers (0.00s)
+=== RUN   TestCreateUser
+--- PASS: TestCreateUser (0.00s)
+=== RUN   TestGetSpecificUser_NotFound
+--- PASS: TestGetSpecificUser_NotFound (0.00s)
 PASS
-coverage: 0.0% of statements
-ok      github.com/alexbednarczyk/crud-gopher   1.285s  coverage: 0.0% of statements
-?       github.com/alexbednarczyk/crud-gopher/docs      [no test files]
-?       github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/dal  [no test files]
-?       github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/routes       [no test files]
-=== RUN   TestSetLogLevel
---- PASS: TestSetLogLevel (0.00s)
-=== RUN   TestStandardFormatLogs
---- PASS: TestStandardFormatLogs (0.00s)
-PASS
-coverage: 100.0% of statements
-ok      github.com/alexbednarczyk/crud-gopher/internal/common   0.773s  coverage: 100.0% of statements
-=== RUN   TestEnvironmentVariables
-time="2020-04-26T11:17:05-05:00" level=info msg="All Environment Variables" DEPLOYED=false LOG_LEVEL=trace
---- PASS: TestEnvironmentVariables (0.00s)
-PASS
-coverage: 66.7% of statements
-ok      github.com/alexbednarczyk/crud-gopher/internal/environment/variables    1.049s  coverage: 66.7% of statements
+ok  	github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/handlers	0.XXXs
+... (other test outputs)
 ```
 
 Coverage information command:
 
 ```
 go tool cover -func coverage.out
-```
-
-Results in:
-
-```
-github.com/alexbednarczyk/crud-gopher/internal/common/log.go:11:                        SetLogLevel                     100.0%
-github.com/alexbednarczyk/crud-gopher/internal/common/log.go:31:                        StandardFormatLogs              100.0%
-github.com/alexbednarczyk/crud-gopher/internal/environment/variables/variables.go:17:   FetchAllEnvironmentVariables    66.7%
-github.com/alexbednarczyk/crud-gopher/main.go:25:                                       main                            0.0%
-total:                                                                                  (statements)                    68.4%
-
 ```
 
 Visual coverage command:
@@ -243,6 +217,8 @@ go tool cover -html=coverage.out
 - [pgx](https://github.com/jackc/pgx) - PostgreSQL driver and toolkit for Go
 - [Swagger](https://swagger.io/) - API tooling
 - [Docker](https://www.docker.com/) - Docker
+- [testify](https://github.com/stretchr/testify) - A Go testing toolkit, including mock generation
+- [google/uuid](https://github.com/google/uuid) - UUID package for Go
 
 ## License
 
