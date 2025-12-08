@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	migrate "github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
@@ -55,6 +56,16 @@ func main() {
 	}
 
 	r := gin.Default()
+
+	// CORS configuration for local development
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:5173", "http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}))
+
 	r.NoRoute(func(c *gin.Context) {})
 	v0AlphaRoutes.SetUpRouter(r, connPool)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
