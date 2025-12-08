@@ -1,17 +1,15 @@
 package handlers
 
 import (
-	"context"
 	"errors"
 	"net/http"
 
 	"github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/models"
 	"github.com/alexbednarczyk/crud-gopher/internal/common"
-	log "github.com/sirupsen/logrus"
-
+	"github.com/alexbednarczyk/crud-gopher/internal/repository"
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v4/pgxpool"
-	uuid "github.com/satori/go.uuid"
+	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // CreateUser godoc
@@ -24,16 +22,8 @@ import (
 // @Success 201 {object} models.UserResponse
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users [post]
-func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
+func CreateUser(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		conn, err := db.Acquire(c)
-		if err != nil {
-			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
-			return
-		}
-		defer conn.Release()
-
 		newRecord := models.UserResponse{}
 
 		if err := c.ShouldBindJSON(&newRecord); err != nil {
@@ -50,9 +40,9 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 		}
 		newRecord.CreatedAt = currentTime
 		newRecord.UpdatedAt = currentTime
-		newRecord.GUID = uuid.NewV4().String()
+		newRecord.GUID = uuid.NewString()
 
-		if _, err := conn.Exec(context.Background(), "insert into users(guid, display_name, first_name, last_name, created_at, updated_at) values($1, $2, $3, $4, $5, $6)", newRecord.GUID, newRecord.DisplayName, newRecord.FirstName, newRecord.LastName, newRecord.CreatedAt, newRecord.UpdatedAt); err == nil {
+		if err := repo.Create(c.Request.Context(), &newRecord); err == nil {
 			c.JSON(http.StatusCreated, newRecord)
 		} else {
 			log.Warn(err.Error())
@@ -72,25 +62,14 @@ func CreateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [get]
-func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
+func GetSpecificUser(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
-
-			record := models.UserResponse{}
-
-			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt); err == nil {
+		if uuidParam, uuidFound := c.Params.Get("userId"); uuidFound {
+			record, err := repo.GetByGUID(c.Request.Context(), uuidParam)
+			if err == nil {
 				c.JSON(http.StatusOK, record)
 			} else {
-				var errNotFound = errors.New("no rows in result set")
-				if !errors.Is(err, errNotFound) {
+				if errors.Is(err, repository.ErrNotFound) {
 					common.NewError(c, http.StatusNotFound, err)
 					return
 				}
@@ -98,8 +77,9 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 				common.NewError(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			err := errors.New("User GUID not found")
+			log.Warn(err)
+			common.NewError(c, http.StatusBadRequest, err)
 		}
 	}
 }
@@ -113,29 +93,10 @@ func GetSpecificUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users [get]
-func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
+func GetAllUsers(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		conn, err := db.Acquire(c)
-		if err != nil {
-			log.Warn(err.Error())
-			common.NewError(c, http.StatusInternalServerError, err)
-			return
-		}
-		defer conn.Release()
-
-		records := []models.UserResponse{}
-
-		if rows, err := conn.Query(context.Background(), "select * from users"); err == nil {
-			for rows.Next() {
-				record := models.UserResponse{}
-				err := rows.Scan(&record.GUID, &record.DisplayName, &record.FirstName, &record.LastName, &record.CreatedAt, &record.UpdatedAt)
-				if err != nil {
-					log.Warn(err.Error())
-					common.NewError(c, http.StatusInternalServerError, err)
-					return
-				}
-				records = append(records, record)
-			}
+		records, err := repo.GetAll(c.Request.Context())
+		if err == nil {
 			c.JSON(http.StatusOK, records)
 		} else {
 			log.Warn(err.Error())
@@ -156,42 +117,35 @@ func GetAllUsers(db *pgxpool.Pool) func(c *gin.Context) {
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [patch]
-func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
+func UpdateUser(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
+		if uuidParam, uuidFound := c.Params.Get("userId"); uuidFound {
+			existingRecord, err := repo.GetByGUID(c.Request.Context(), uuidParam)
 			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
-
-			existingRecord := models.UserResponse{}
-
-			if err := conn.QueryRow(context.Background(), "select * from users where guid=$1", uuid).Scan(&existingRecord.GUID, &existingRecord.DisplayName, &existingRecord.FirstName, &existingRecord.LastName, &existingRecord.CreatedAt, &existingRecord.UpdatedAt); err != nil {
+				if errors.Is(err, repository.ErrNotFound) {
+					common.NewError(c, http.StatusNotFound, err)
+					return
+				}
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
 				return
 			}
 
-			record := models.UserResponse{}
-
-			if err := c.ShouldBindJSON(&record); err != nil {
+			var inputRecord models.UserResponse
+			if err := c.ShouldBindJSON(&inputRecord); err != nil {
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
 				return
 			}
 
-			if len(record.DisplayName) == 0 {
-				record.DisplayName = existingRecord.DisplayName
+			if len(inputRecord.DisplayName) > 0 {
+				existingRecord.DisplayName = inputRecord.DisplayName
 			}
-			if len(record.FirstName) == 0 {
-				record.FirstName = existingRecord.FirstName
+			if len(inputRecord.FirstName) > 0 {
+				existingRecord.FirstName = inputRecord.FirstName
 			}
-			if len(record.LastName) == 0 {
-				record.LastName = existingRecord.LastName
+			if len(inputRecord.LastName) > 0 {
+				existingRecord.LastName = inputRecord.LastName
 			}
 
 			currentTime, err := common.CurrentTime()
@@ -200,21 +154,18 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 				common.NewError(c, http.StatusInternalServerError, err)
 				return
 			}
+			existingRecord.UpdatedAt = currentTime
 
-			record.CreatedAt = existingRecord.CreatedAt
-			record.UpdatedAt = currentTime
-			record.GUID = uuid
-
-			if _, err := db.Exec(context.Background(), "update users set display_name=$2, first_name=$3, last_name=$4, updated_at=$5 where guid=$1", record.GUID, record.DisplayName, record.FirstName, record.LastName, record.UpdatedAt); err == nil {
-				c.JSON(http.StatusOK, record)
+			if err := repo.Update(c.Request.Context(), existingRecord); err == nil {
+				c.JSON(http.StatusOK, existingRecord)
 			} else {
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
-				return
 			}
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			err := errors.New("User GUID not found")
+			log.Warn(err)
+			common.NewError(c, http.StatusBadRequest, err)
 		}
 	}
 }
@@ -231,20 +182,10 @@ func UpdateUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [put]
-func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
+func ReplaceUser(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
-
-			record := models.UserResponse{}
-
+		if uuidParam, uuidFound := c.Params.Get("userId"); uuidFound {
+			var record models.UserResponse
 			if err := c.ShouldBindJSON(&record); err != nil {
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
@@ -260,17 +201,39 @@ func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 
 			record.CreatedAt = currentTime
 			record.UpdatedAt = currentTime
-			record.GUID = uuid
+			record.GUID = uuidParam
 
-			if _, err := db.Exec(context.Background(), "update users set display_name=$2, first_name=$3, last_name=$4, created_at=$5, updated_at=$6 where guid=$1", uuid, record.DisplayName, record.FirstName, record.LastName, record.CreatedAt, record.UpdatedAt); err == nil {
+			// Note: Replace implies complete overwrite.
+			// However, in standard REST PUT, if resource exists, update it. If not, create?
+			// The original code did an UPDATE on all fields.
+			// But wait, if it's an UPDATE, we might need to know if it existed.
+			// The original code returned success if UPDATE succeeded.
+			// My repository Update returns ErrNotFound if not found.
+			// So if Update fails with NotFound, should we Create?
+			// The original code: "update users set ... where guid=$1". If 0 rows, it didn't error?
+			// Wait, original code:
+			// if _, err := db.Exec(...); err == nil { ... }
+			// db.Exec doesn't return error on 0 rows affected.
+			// So the original code reported success even if ID didn't exist?
+			// "update" returns CommandTag.
+			// Let's assume strict update for now as per "ReplaceUser" naming usually on existing resource or we'd handle upsert.
+			// I'll stick to calling Update and handling NotFound.
+
+			err = repo.Update(c.Request.Context(), &record)
+			if err == nil {
 				c.JSON(http.StatusOK, record)
 			} else {
+				if errors.Is(err, repository.ErrNotFound) {
+					common.NewError(c, http.StatusNotFound, err)
+					return
+				}
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
 			}
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			err := errors.New("User GUID not found")
+			log.Warn(err)
+			common.NewError(c, http.StatusBadRequest, err)
 		}
 	}
 }
@@ -286,29 +249,23 @@ func ReplaceUser(db *pgxpool.Pool) func(c *gin.Context) {
 // @Failure 400 {object} common.HTTPError
 // @Failure 500 {object} common.HTTPError
 // @Router /v0alpha/crud/users/{user_id} [delete]
-func DeleteUser(db *pgxpool.Pool) func(c *gin.Context) {
+func DeleteUser(repo repository.UserRepository) func(c *gin.Context) {
 	return func(c *gin.Context) {
-
-		if uuid, uuidFound := c.Params.Get("userId"); uuidFound {
-			conn, err := db.Acquire(c)
-			if err != nil {
-				log.Warn(err.Error())
-				common.NewError(c, http.StatusInternalServerError, err)
-				return
-			}
-			defer conn.Release()
-
-			if _, err := db.Exec(context.Background(), "delete from users where guid=$1", uuid); err == nil {
+		if uuidParam, uuidFound := c.Params.Get("userId"); uuidFound {
+			if err := repo.Delete(c.Request.Context(), uuidParam); err == nil {
 				c.JSON(http.StatusNoContent, gin.H{})
 			} else {
+				if errors.Is(err, repository.ErrNotFound) {
+					common.NewError(c, http.StatusNotFound, err)
+					return
+				}
 				log.Warn(err.Error())
 				common.NewError(c, http.StatusInternalServerError, err)
-				return
 			}
-
 		} else {
-			log.Warn(errors.New("User GUID not found"))
-			common.NewError(c, http.StatusBadRequest, errors.New("User GUID not found"))
+			err := errors.New("User GUID not found")
+			log.Warn(err)
+			common.NewError(c, http.StatusBadRequest, err)
 		}
 	}
 }

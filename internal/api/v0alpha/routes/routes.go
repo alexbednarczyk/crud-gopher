@@ -5,6 +5,7 @@ import (
 	"github.com/jackc/pgx/v4/pgxpool"
 
 	v0AlphaHandlers "github.com/alexbednarczyk/crud-gopher/internal/api/v0alpha/handlers"
+	"github.com/alexbednarczyk/crud-gopher/internal/repository"
 )
 
 // SetUpRouter sets up the routing logic for the defined API paths
@@ -20,12 +21,13 @@ func SetUpRouter(r *gin.Engine, db *pgxpool.Pool) {
 	v0AlphaExamples.GET("/header", v0AlphaHandlers.UseHeader())
 	v0AlphaExamples.GET("/securities", v0AlphaHandlers.Securities())
 
+	userRepo := repository.NewPostgresUserRepository(db)
 	v0AlphaCRUD := v0Alpha.Group("/crud")
-	v0AlphaCRUD.POST("/users", v0AlphaHandlers.CreateUser(db))
-	v0AlphaCRUD.GET("/users/:userId", v0AlphaHandlers.GetSpecificUser(db))
-	v0AlphaCRUD.GET("/users", v0AlphaHandlers.GetAllUsers(db))
-	v0AlphaCRUD.PATCH("/users/:userId", v0AlphaHandlers.UpdateUser(db))
-	v0AlphaCRUD.PUT("/users/:userId", v0AlphaHandlers.ReplaceUser(db))
-	v0AlphaCRUD.DELETE("/users/:userId", v0AlphaHandlers.DeleteUser(db))
+	v0AlphaCRUD.POST("/users", v0AlphaHandlers.CreateUser(userRepo))
+	v0AlphaCRUD.GET("/users/:userId", v0AlphaHandlers.GetSpecificUser(userRepo))
+	v0AlphaCRUD.GET("/users", v0AlphaHandlers.GetAllUsers(userRepo))
+	v0AlphaCRUD.PATCH("/users/:userId", v0AlphaHandlers.UpdateUser(userRepo))
+	v0AlphaCRUD.PUT("/users/:userId", v0AlphaHandlers.ReplaceUser(userRepo))
+	v0AlphaCRUD.DELETE("/users/:userId", v0AlphaHandlers.DeleteUser(userRepo))
 
 }
